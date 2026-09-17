@@ -41,6 +41,50 @@ export interface ValidationIssue {
   suggestion: string;
 }
 
+export interface ConsistencyStory {
+  story_id: string;
+  score: number;
+  components: Record<string, number>;
+  raw_semantic: number | null;
+  veto: boolean;
+  numeric_conflicts: { pivot_ac: string; other_ac: string }[];
+  pivot_text: string;
+  back_text: string;
+}
+
+export interface ConsistencyPair {
+  lang: Lang;
+  pivot: Lang;
+  label: string;
+  score: number;
+  components: Record<string, number>;
+  stories: ConsistencyStory[];
+  missing_ids: string[];
+}
+
+export interface ConsistencyDivergence {
+  lang: string;
+  label: string;
+  story_id: string;
+  score: number;
+  reason: string;
+  pivot_text: string;
+  back_text: string;
+  numeric_conflicts?: { pivot_ac: string; other_ac: string }[];
+}
+
+export interface ConsistencyReport {
+  method: "structural" | "backtranslate" | "embeddings" | string;
+  pivot: string;
+  pivot_label: string;
+  overall: number;
+  terminology_coverage: number;
+  pairs: ConsistencyPair[];
+  divergences: ConsistencyDivergence[];
+  notes: string[];
+  thresholds: { min_score: number; blocker_score: number };
+}
+
 export interface Clarifications {
   original: string;
   goal: string;
@@ -73,6 +117,7 @@ export interface GenerateResult {
   glossary: GlossaryEntry[];
   markdown: Record<string, string>;
   clarifications: Clarifications;
+  consistency: ConsistencyReport | null;
   validation: ValidationResult;
   rounds_used: number;
   status: ValidationStatus;

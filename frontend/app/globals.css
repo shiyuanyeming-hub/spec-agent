@@ -485,6 +485,93 @@ th {
   margin-top: 12px;
 }
 
+.score-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.score-row .name {
+  width: 86px;
+  font-size: 13px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.meter {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: #eef1f7;
+  overflow: hidden;
+}
+
+.meter > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #4c6ef5, #22b8cf);
+}
+
+.meter.warn > span {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.meter.bad > span {
+  background: linear-gradient(90deg, #dc2626, #f87171);
+}
+
+.score-value {
+  width: 52px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.divergence {
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--warn);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  background: #fffdf7;
+}
+
+.divergence p {
+  margin: 0;
+}
+
+.textpair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.textpair > div {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12.5px;
+  color: #374151;
+}
+
+@media (max-width: 760px) {
+  .textpair {
+    grid-template-columns: 1fr;
+  }
+}
+
+.components {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
 .mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 12.5px;

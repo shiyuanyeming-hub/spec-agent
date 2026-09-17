@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import ClarificationPanel from "@/components/ClarificationPanel";
+import ConsistencyPanel from "@/components/ConsistencyPanel";
 import GlossaryTable from "@/components/GlossaryTable";
 import { LangTabs, PrdDoc } from "@/components/PrdDoc";
 import StageTimeline from "@/components/StageTimeline";
@@ -194,7 +195,12 @@ export default function Home() {
               </div>
 
               <div className="card">
-                <h2>6 · 校验报告</h2>
+                <h2>6 · 三语一致性</h2>
+                <ConsistencyPanel report={result.consistency} />
+              </div>
+
+              <div className="card">
+                <h2>7 · 校验报告</h2>
                 <ValidationPanel validation={result.validation} />
               </div>
             </>
