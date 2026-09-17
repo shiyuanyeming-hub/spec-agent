@@ -9,6 +9,8 @@ import json
 from dataclasses import dataclass, field
 
 from app.checks import structural_issues
+from app.config import settings
+from app.consistency import ConsistencyReport, consistency_issues, evaluate_consistency
 from app.llm import LLMResult
 from app.schemas import ValidationRaw
 
@@ -42,6 +44,11 @@ class ValidationReport:
     summary: str = ""
     structural_count: int = 0
     suggestions: list[str] = field(default_factory=list)
+    consistency: ConsistencyReport | None = None
+
+    @property
+    def consistency_score(self) -> float | None:
+        return round(self.consistency.overall, 1) if self.consistency else None
 
     def _by(self, severity: str) -> list[dict]:
         return [i for i in self.issues if i.get("severity") == severity]
@@ -101,6 +108,15 @@ class ValidatorAgent:
             summary = f"LLM 评审失败（{exc}），本轮仅采信确定性结构校验。"
 
         issues = structural + llm_issues
+
+        # 三语一致性量化评分（structural / backtranslate / embeddings，可用 off 关闭）
+        consistency: ConsistencyReport | None = None
+        if settings.consistency_method != "off" and len(getattr(prd, "target_langs", []) or []) > 1:
+            consistency = await evaluate_consistency(prd, llm=self.llm)
+            issues = issues + consistency_issues(consistency)
+            if not summary:
+                summary = f"三语一致性 {consistency.overall:.0f} 分。"
+
         blockers = [i for i in issues if i.get("severity") == "blocker"]
         if not summary:
             summary = "确定性结构校验通过。" if not structural else "确定性结构校验发现问题，详见 issues。"
@@ -109,4 +125,5 @@ class ValidatorAgent:
             issues=issues,
             summary=summary,
             structural_count=len(structural),
+            consistency=consistency,
         ).finalize()

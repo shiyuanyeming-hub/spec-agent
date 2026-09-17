@@ -11,7 +11,7 @@ from app.llm import LLMError
 from app.pipeline import iter_pipeline, run_pipeline
 from app.samples import SAMPLES
 
-app = FastAPI(title="Spec Agent", version="0.2.0", description="模糊需求 → 中日英三语标准 PRD")
+app = FastAPI(title="Spec Agent", version="0.3.0", description="模糊需求 → 中日英三语标准 PRD + 三语一致性评分")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,

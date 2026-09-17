@@ -27,6 +27,51 @@ class LLMResult:
     tokens: int = 0
 
 
+def salvage_truncated_json(text: str) -> dict | None:
+    """从被截断的 JSON 里救回"最后一个完整元素之前"的内容。
+
+    多语种 PRD 很长，模型偶尔会在 glossary/docs 中途被 token 上限切断。
+    这里一次性扫描并记录所有"完整的数组/对象结束位置"，取最后一个，补上闭合括号即可解析——
+    丢掉的是尾部未完成的部分，而不是整轮生成。
+    """
+    stack: list[str] = []
+    in_string = False
+    escaped = False
+    last_boundary: tuple[int, list[str]] | None = None
+    pairs = {"{": "}", "[": "]"}
+
+    for index, char in enumerate(text):
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+        if char == '"':
+            in_string = True
+        elif char in pairs:
+            stack.append(char)
+        elif char in ("}", "]"):
+            if stack and pairs[stack[-1]] == char:
+                stack.pop()
+                if stack:
+                    last_boundary = (index + 1, list(stack))
+                elif index + 1 == len(text):
+                    last_boundary = (index + 1, [])
+
+    if not last_boundary:
+        return None
+    end, remaining = last_boundary
+    candidate = text[:end] + "".join(pairs[open_bracket] for open_bracket in reversed(remaining))
+    try:
+        repaired = json.loads(candidate)
+    except json.JSONDecodeError:
+        return None
+    return repaired if isinstance(repaired, dict) else None
+
+
 def extract_json(text: str) -> dict:
     """从模型输出里取出 JSON 对象：容忍 ```json 围栏与前后废话。"""
     if not text or not text.strip():
@@ -40,10 +85,16 @@ def extract_json(text: str) -> dict:
     except json.JSONDecodeError:
         start, end = candidate.find("{"), candidate.rfind("}")
         if start == -1 or end <= start:
+            salvaged = salvage_truncated_json(text)
+            if salvaged is not None:
+                return salvaged
             raise LLMError(f"模型返回内容不是 JSON：{text[:200]}") from None
         try:
             parsed = json.loads(candidate[start : end + 1])
         except json.JSONDecodeError as exc:
+            salvaged = salvage_truncated_json(candidate[start:])
+            if salvaged is not None:
+                return salvaged
             raise LLMError(f"模型返回 JSON 解析失败：{exc}; 原文片段：{text[:200]}") from exc
     if not isinstance(parsed, dict):
         raise LLMError("模型返回的顶层 JSON 必须是对象")
@@ -78,6 +129,8 @@ class OpenAICompatLLM:
             "temperature": settings.llm_temperature if temperature is None else temperature,
             "response_format": {"type": "json_object"},
         }
+        if settings.llm_max_tokens:
+            payload["max_tokens"] = settings.llm_max_tokens
         headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
         url = f"{self.base_url}/chat/completions"
 
@@ -131,7 +184,42 @@ class FakeLLM:
             return LLMResult(self._prd(extras))
         if name == "ValidationRaw":
             return LLMResult(self._validation(extras, schema))
+        if name == "BackTranslationRaw":
+            return LLMResult(self._backtranslation(extras))
         raise LLMError(f"FakeLLM 不支持的 schema：{name}")
+
+    def _backtranslation(self, extras: dict) -> dict:
+        """Mock 回译：把基准语种原文当作回译结果（一致性接近满分，链路可验证）。
+
+        分片回译时只回译本片包含的故事编号，因此用 chunk_doc 决定"回译哪几条"，
+        内容仍取基准语种原文——这正是忠实回译应有的样子。
+        """
+        pivot_doc = extras.get("pivot_doc") or {}
+        chunk_doc = extras.get("chunk_doc") or pivot_doc
+        sources = list(extras.get("source_langs") or [])
+        by_id = {str(story.get("id")): story for story in (pivot_doc.get("user_stories") or [])}
+        ids = [str(story.get("id")) for story in (chunk_doc.get("user_stories") or [])] or list(by_id)
+        stories = [
+            {
+                "id": story_id,
+                "story": by_id[story_id].get("story", ""),
+                "acceptance_criteria": list(by_id[story_id].get("acceptance_criteria") or []),
+            }
+            for story_id in ids
+            if story_id in by_id
+        ]
+        return {
+            "docs": [
+                {
+                    "lang": lang,
+                    "title": pivot_doc.get("title", "") if chunk_doc is pivot_doc else "",
+                    "background": pivot_doc.get("background", "") if chunk_doc is pivot_doc else "",
+                    "goal": pivot_doc.get("goal", "") if chunk_doc is pivot_doc else "",
+                    "user_stories": stories,
+                }
+                for lang in sources
+            ]
+        }
 
     def _clarification(self, extras: dict) -> dict:
         raw = _clip(str(extras.get("raw_text", "")), 80)
@@ -152,9 +240,9 @@ class FakeLLM:
         return {
             "product_name": product_name,
             "glossary": [
-                {"term_zh": "验收标准", "term_en": "Acceptance Criteria (AC)", "term_ja": "受入基準", "note": "可逐条判定通过/不通过"},
-                {"term_zh": "用户故事", "term_en": "User Story", "term_ja": "ユーザーストーリー", "note": "作为/我可以/以便 三段式"},
-                {"term_zh": "灰度发布", "term_en": "Staged Rollout", "term_ja": "段階的リリース", "note": "按流量比例逐步放量"},
+                {"term_zh": "进度指示", "term_en": "progress indicator", "term_ja": "進捗インジケータ", "note": "让用户知道当前在第几步"},
+                {"term_zh": "支付", "term_en": "payment", "term_ja": "支払い", "note": "本文档讨论的核心动作"},
+                {"term_zh": "漏斗看板", "term_en": "funnel dashboard", "term_ja": "ファネル計測", "note": "按环节统计流失的看板"},
             ],
             "docs": docs,
         }

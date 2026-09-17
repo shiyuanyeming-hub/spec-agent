@@ -1,10 +1,9 @@
 """Structurer Agent：把澄清后的需求映射为标准 PRD 模板（多语言 + 术语对照）。"""
 from dataclasses import dataclass, field
 
+from app.config import LANG_LABEL
 from app.llm import LLMResult
 from app.schemas import PRDRaw
-
-LANG_LABEL = {"zh": "简体中文", "ja": "日本語", "en": "English"}
 
 STRUCTURER_SYSTEM_PROMPT = """你是跨国产品团队的资深产品经理。把澄清后的需求整理成标准 PRD，并按指定语种各输出一份。
 硬性要求：
@@ -15,6 +14,7 @@ STRUCTURER_SYSTEM_PROMPT = """你是跨国产品团队的资深产品经理。�
 5. 必须输出 target_langs 里列出的每一个语种，lang 字段只能取 zh / ja / en
 6. 用户确认问题写进各语种的 open_questions；未确认的假设在 risks 或 open_questions 中体现
 7. 严禁占位符：不写 "X%"、"TBD"、"待定"、"具体数值待定"；无法给出数值的指标写进 open_questions 并说明测量口径
+8. 用户故事控制在 3~6 条，聚焦首期可交付范围；其余想法写进 open_questions 或 risks（避免输出过长导致 JSON 被截断）
 8. 若给出「上一轮校验未通过」，请逐条修正后重新输出完整 PRD（不要只输出差异）
 
 只输出 JSON，不要输出任何解释文字。字段名必须与给定 JSON Schema 完全一致：

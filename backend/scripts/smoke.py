@@ -54,6 +54,20 @@ async def main() -> int:
         mark = {"ok": "✓", "start": "…", "passed": "✓", "failed": "✗", "needs_review": "!"}.get(event["status"], "·")
         print(f"  {mark} [{event['round']}] {event['stage']:<11} {event['status']:<12} {event['detail'][:70]}")
 
+    consistency = result.validation.consistency
+    if consistency is not None:
+        print(
+            f"\n三语一致性：{consistency.overall:.0f} 分（{consistency.method}，基准 {consistency.pivot}）"
+            f" · 术语覆盖率 {consistency.terminology_coverage * 100:.0f}%"
+        )
+        for pair in consistency.pairs:
+            detail = "  ".join(f"{key}={value:.2f}" for key, value in pair.components.items() if value is not None)
+            print(f"  · 基准 ↔ {pair.lang}：{pair.score:.0f} 分  组件 {detail}")
+        for item in consistency.divergences[:3]:
+            print(f"  ! 需人工复核 {item['story_id']}（{item['lang']}）{item['score']:.0f} 分：{item['reason'][:70]}")
+        for note in consistency.notes:
+            print(f"  · {note}")
+
     print(f"\n校验结果：{'通过' if result.validation.passed else '未通过'}（{result.rounds_used} 轮）— {result.validation.summary}")
     for issue in result.validation.issues[:5]:
         print(f"  - [{issue['severity']}/{issue['category']}] {issue['message']}")

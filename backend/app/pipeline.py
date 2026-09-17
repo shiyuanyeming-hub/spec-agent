@@ -45,9 +45,11 @@ class PipelineResult:
                 "assumptions": self.clarifications.assumptions,
                 "open_questions": self.clarifications.open_questions,
             },
+            "consistency": self.validation.consistency.to_dict() if self.validation.consistency else None,
             "validation": {
                 "passed": self.validation.passed,
                 "status": self.validation.status,
+                "consistency_score": self.validation.consistency_score,
                 "summary": self.validation.summary,
                 "issues": self.validation.issues,
                 "suggestions": self.validation.suggestions,
@@ -113,6 +115,12 @@ async def iter_pipeline(
     report: ValidationReport | None = None
     stalled = False
     previous_score: int | None = None
+    # 交付排序：先看有没有 blocker（blocked 的 PRD 不能直接交付），再看问题加权分
+    best: tuple[tuple[int, int], PRD, ValidationReport] | None = None
+
+    def rank(report: ValidationReport, score: int) -> tuple[int, int]:
+        return (1 if report.blockers else 0, score)
+
     for round_no in range(1, rounds + 1):
         round_started = time.perf_counter()
         yield ("stage", event("structurer", "start", round_no))
@@ -126,12 +134,21 @@ async def iter_pipeline(
         yield ("stage", event("validator", "start", round_no))
         report = await validator.run(prd, round_no=round_no)
         score = 3 * len(report.blockers) + len(report.majors)
+        detail = report.summary or f"{len(report.issues)} 条问题"
+        if report.consistency_score is not None:
+            detail = f"{detail} · 三语一致性 {report.consistency_score:.0f} 分（{report.consistency.method}）"
         yield ("stage", event(
             "validator", report.status, round_no,
-            report.summary or f"{len(report.issues)} 条问题",
+            detail,
             int((time.perf_counter() - round_started) * 1000),
         ))
+        if best is None or rank(report, score) < best[0]:
+            best = (rank(report, score), prd, report)
         if score == 0:  # 无 blocker 也无 major：收敛，直接交付
+            break
+        if not report.blockers and round_no >= 2:
+            # 已迭代过一次且没有 blocker：剩下的 major 进评审清单即可，
+            # 再迭代多半只是措辞抖动（还会引入新的抖动），不值得烧 token。
             break
         if previous_score is not None and score >= previous_score:
             # 问题数没有下降：继续迭代只是在烧 token，停下来把剩余问题交给人工
@@ -141,6 +158,9 @@ async def iter_pipeline(
         clarified.attach_feedback(report.blockers + report.majors[:5])
 
     assert prd is not None and report is not None
+    if best is not None and best[0] < rank(report, 3 * len(report.blockers) + len(report.majors)):
+        # 后续轮次可能变差（模型抖动）：交付排序最优的那一轮
+        _, prd, report = best
     result = PipelineResult(
         prd=prd,
         clarifications=clarified,

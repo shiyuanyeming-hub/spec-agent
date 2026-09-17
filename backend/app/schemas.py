@@ -65,3 +65,23 @@ class ValidationRaw(BaseModel):
     passed: bool = Field(description="无 blocker/major 问题时为 true")
     summary: str = Field(default="", description="一句话结论")
     issues: list[ValidationIssue] = Field(default_factory=list)
+
+
+class BackTranslatedStory(BaseModel):
+    id: str = Field(description="必须与源语种完全一致的故事编号")
+    story: str
+    acceptance_criteria: list[str] = Field(default_factory=list)
+
+
+class BackTranslatedDoc(BaseModel):
+    """某语种 PRD 回译到基准语言后的结果（用于一致性比对）。"""
+
+    lang: Lang = Field(description="被回译的源语种")
+    title: str = ""
+    background: str = ""
+    goal: str = ""
+    user_stories: list[BackTranslatedStory] = Field(default_factory=list)
+
+
+class BackTranslationRaw(BaseModel):
+    docs: list[BackTranslatedDoc] = Field(default_factory=list, description="每个待回译语种一条")
