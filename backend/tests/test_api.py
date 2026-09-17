@@ -27,6 +27,12 @@ def test_generate_returns_multilingual_prd(client, demo_text):
     assert body["validation"]["passed"] is True
     assert body["rounds_used"] >= 1
     assert body["trace"][-1]["stage"] == "done"
+    consistency = body["consistency"]
+    assert consistency is not None
+    assert consistency["method"] == "structural"
+    assert consistency["overall"] > 0
+    assert {pair["lang"] for pair in consistency["pairs"]} == {"ja", "en"}
+    assert "三语一致性" in next(e["detail"] for e in body["trace"] if e["stage"] == "validator" and e["round"] == 1 and e["status"] != "start")
 
 
 def test_generate_defaults_to_three_langs(client, demo_text):

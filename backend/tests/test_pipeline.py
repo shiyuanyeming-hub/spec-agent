@@ -82,6 +82,23 @@ async def test_loop_stops_early_when_no_progress(demo_text):
     assert result.status == "blocked"
 
 
+async def test_loop_stops_after_one_extra_round_without_blockers(demo_text):
+    llm = ScriptedValidatorLLM(blockers_per_round=[0, 0, 0], majors_per_round=[5, 2, 1])
+    result = await run_pipeline(demo_text, LANGS, llm=llm, max_rounds=3)
+    assert result.rounds_used == 2, "无 blocker 时再迭代一次即可，剩下进评审清单"
+    assert result.status == "needs_review"
+    assert result.validation.majors
+
+
+async def test_round_without_blockers_wins_over_an_earlier_blocked_round(demo_text):
+    llm = ScriptedValidatorLLM(blockers_per_round=[1, 0], majors_per_round=[0, 4])
+    result = await run_pipeline(demo_text, LANGS, llm=llm, max_rounds=3)
+    assert result.rounds_used == 2
+    assert result.validation.blockers == [], "有 blocker 的一轮不该被交付，即使它的加权分更低"
+    assert result.status == "needs_review"
+    assert len(result.validation.majors) == 4, "交付的是第二轮的内容"
+
+
 async def test_major_only_issues_do_not_block_delivery(demo_text):
     result = await run_pipeline(demo_text, LANGS, llm=FakeLLM(fail_validation_rounds=99), max_rounds=3)
     assert result.validation.passed is True

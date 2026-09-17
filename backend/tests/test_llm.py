@@ -1,7 +1,7 @@
 import httpx
 import pytest
 
-from app.llm import FakeLLM, LLMError, OpenAICompatLLM, extract_json
+from app.llm import FakeLLM, LLMError, OpenAICompatLLM, extract_json, salvage_truncated_json
 from app.schemas import ClarificationRaw, PRDRaw
 
 
@@ -12,6 +12,21 @@ def test_extract_json_plain():
 def test_extract_json_fenced_and_prose():
     text = '好的，结果如下：\n```json\n{"a": [1, 2]}\n```\n希望有帮助'
     assert extract_json(text) == {"a": [1, 2]}
+
+
+def test_extract_json_salvages_truncated_prd():
+    """多语种 PRD 被 token 上限截断时，应救回已完成的语种而不是整轮失败。"""
+    truncated = '{"product_name": "Demo", "glossary": [{"term_zh": "支付"}], "docs": [{"lang": "ja", "title": "PRD"}, {"lang": "en", "tit'
+    parsed = extract_json(truncated)
+    assert parsed["product_name"] == "Demo"
+    assert parsed["glossary"] == [{"term_zh": "支付"}]
+    assert parsed["docs"] == [{"lang": "ja", "title": "PRD"}]
+
+
+def test_salvage_returns_none_for_garbage():
+    assert salvage_truncated_json("not json at all") is None
+    assert salvage_truncated_json('{"a": ') is None
+    assert salvage_truncated_json('{"a": 1}')["a"] == 1
 
 
 def test_extract_json_invalid():
