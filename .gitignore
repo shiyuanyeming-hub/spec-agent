@@ -1,0 +1,14 @@
+# 本地环境
+.env
+__pycache__/
+*.pyc
+.venv/
+
+# Node
+node_modules/
+.next/
+out/
+
+# 系统
+.DS_Store
+*.log

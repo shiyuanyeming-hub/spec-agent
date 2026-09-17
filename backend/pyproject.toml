@@ -1,0 +1,16 @@
+[project]
+name = "spec-agent"
+version = "0.1.0"
+description = "Turn vague requirements into structured PRDs (zh/ja/en) via a multi-agent pipeline"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "pydantic>=2.6",
+    "pydantic-settings>=2.2",
+    "httpx>=0.27",
+    "sse-starlette>=2.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.4"]
