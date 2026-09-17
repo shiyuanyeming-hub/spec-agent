@@ -1,7 +1,7 @@
 [project]
 name = "spec-agent"
-version = "0.1.0"
-description = "Turn vague requirements into structured PRDs (zh/ja/en) via a multi-agent pipeline"
+version = "0.2.0"
+description = "Turn vague requirements into structured, trilingual (zh/ja/en) PRDs via a multi-agent pipeline"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.110",
@@ -9,8 +9,23 @@ dependencies = [
     "pydantic>=2.6",
     "pydantic-settings>=2.2",
     "httpx>=0.27",
+    "python-dotenv>=1.0",
     "sse-starlette>=2.0",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0", "ruff>=0.4"]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.24", "ruff>=0.4"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]
