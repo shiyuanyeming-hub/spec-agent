@@ -1,7 +1,25 @@
-FROM node:20-alpine
+FROM node:20-alpine AS deps
 WORKDIR /app
-# TODO(v0.2): Next.js 前端初始化后补全构建步骤
-COPY package.json .
-RUN npm install
+COPY package.json package-lock.json ./
+RUN npm ci
+
+FROM node:20-alpine AS builder
+WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-CMD ["npm", "run", "dev"]
+RUN npm run build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1
+
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/next.config.mjs ./next.config.mjs
+
+EXPOSE 3000
+CMD ["npm", "run", "start"]
