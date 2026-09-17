@@ -262,6 +262,9 @@ ruff check app tests
 校验语义（blocker 阻塞、major 只进清单）、迭代与止损（收敛 / 达上限 / 无改善提前停）、
 API 校验与错误码、SSE 事件序列、Markdown 渲染。
 
+CI 定义示例见 [`docs/ci-workflow.example.yml`](docs/ci-workflow.example.yml)：复制到 `.github/workflows/ci.yml` 即可启用
+（跑 ruff + pytest + 前端构建；测试全程 Mock 模式，不需要任何密钥）。
+
 ---
 
 ## Roadmap

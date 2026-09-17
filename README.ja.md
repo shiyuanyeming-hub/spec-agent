@@ -246,6 +246,9 @@ ruff check app tests
 検証の意味づけ（blocker はブロック、major はチェックリストのみ）、反復の収束・上限・早期停止、
 API のバリデーションとエラーコード、SSE イベント順序、Markdown レンダリング。
 
+CI 定義のサンプルは [`docs/ci-workflow.example.yml`](docs/ci-workflow.example.yml)。`.github/workflows/ci.yml` にコピーすれば有効化できます
+（ruff + pytest + フロントエンドのビルド。すべて Mock モードなのでシークレット不要）。
+
 ## ロードマップ
 
 - [x] **v0.1** 3 段階パイプラインの骨組み + PRD テンプレート + Docker Compose

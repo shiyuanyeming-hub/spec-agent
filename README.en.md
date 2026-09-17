@@ -242,6 +242,8 @@ ruff check app tests
 
 Coverage: LLM JSON tolerance and retries, mock determinism, structural checks (missing language / story counts / ACs / glossary), validation semantics (blockers block, majors only become a checklist), loop convergence / cap / early stop, API validation and error codes, SSE event sequence, Markdown rendering.
 
+A ready-to-use CI definition lives in [`docs/ci-workflow.example.yml`](docs/ci-workflow.example.yml) — copy it to `.github/workflows/ci.yml` to enable (runs ruff + pytest + frontend build; everything is mock mode, so no secrets are needed).
+
 ## Roadmap
 
 - [x] **v0.1** three-stage pipeline skeleton + PRD template + Docker Compose
