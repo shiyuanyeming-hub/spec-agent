@@ -3,7 +3,7 @@
 > あいまいな要望を、中・日・英で整合した標準 PRD に。
 > Turn a vague one-liner into an aligned zh / ja / en PRD.
 
-[![Status](https://img.shields.io/badge/status-v0.2-blue)]() [![Python](https://img.shields.io/badge/python-3.11+-blue)]() [![Next.js](https://img.shields.io/badge/Next.js-14-black)]() [![Tests](https://img.shields.io/badge/tests-43%20passed-brightgreen)]() [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Status](https://img.shields.io/badge/status-v0.3-blue)]() [![Python](https://img.shields.io/badge/python-3.11+-blue)]() [![Next.js](https://img.shields.io/badge/Next.js-14-black)]() [![Tests](https://img.shields.io/badge/tests-68%20passed-brightgreen)]() [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 [中文](README.md) · [English](README.en.md)
 
@@ -26,6 +26,7 @@
 | 🌐 **多言語の整合出力** | 1 回の入力で zh/ja/en の PRD を生成。ユーザーストーリー ID は各言語で一致（逐語訳ではなくローカライズ） |
 | 📒 **用語対訳表** | 「验收标准 / Acceptance Criteria / 受入基準」などを三言語で対訳し、用語の揺れを根本から防ぐ |
 | ✅ **判定可能な検証** | 決定的な構造チェック（言語欠落・ストーリー数不一致・AC 欠落など）＋ LLM による意味チェック（INVEST・テスト可能性・三言語等価性） |
+| 📐 **三言語の一致性スコア** | 言語ペアごとに 0〜100 点：ストーリー ID・数値閾値・AC 数・技術用語＋逆翻訳またはクロスリンガルベクトル。低スコア項目はリスク順に人手レビューへ |
 | 🔁 **差し戻しループと停止条件** | 不合格なら Structurer に差し戻し。指摘数が減らなくなったらトークンを焼かずに打ち切る |
 | 🧭 **前提の明示** | 情報が足りない部分は勝手に決めない。「明示した前提」と「確認待ち事項」に分離 |
 | 🚫 **プレースホルダ禁止** | `X%` / `TBD` / 「未定」をプロンプトで禁止。指標には閾値と測定方法を必須化 |
@@ -61,6 +62,7 @@
 - [docs/example-output.zh.md](docs/example-output.zh.md)
 - [docs/example-output.ja.md](docs/example-output.ja.md)
 - [docs/example-output.en.md](docs/example-output.en.md)
+- [docs/example-consistency.json](docs/example-consistency.json) — 同一実行の一致性レポート（総合 97.1、zh↔ja 98.6、zh↔en 98.1、要確認項目なし）
 
 スクリーンショット：[docs/screenshots](docs/screenshots)
 
@@ -106,6 +108,42 @@ LLM にレビューさせると必ず何か指摘が出て、永遠に合格し�
 | `minor` | 表現・網羅性・可読性の改善提案 | しない |
 
 1 回の実行で「PRD」と「レビュー・チェックリスト」を同時に返し、指摘数が**厳密に減ったときだけ**次ラウンドへ進みます。減らなければ早期停止（`stalled = true`）して残りは人間に委ねます。
+blocker が無い場合は追加で 1 ラウンドまでとし、**最も良いラウンドの成果物を納品**します（モデルの揺らぎで後半のラウンドが悪化することがあるため）。
+
+---
+
+## 三言語の一致性スコア
+
+"3 言語が同じことを言っているか" は測定できます。各実行は 0〜100 のスコアと、人手で確認すべき項目をリスク順に返します。
+
+**スコアモデル**（言語ペアごと、重みは合計 100%）：
+
+| シグナル | 重み | 判定内容 |
+| --- | --- | --- |
+| ストーリー ID の対応 | 25% | 各言語で ID が一対一に対応しているか（訳抜け・混入） |
+| 数値閾値の一致 | 25% | 同じ AC を対応付けて数値を比較（18pt vs 24pt、3 ステップ vs 4）／完全に衝突する AC は 55 点未満に落としてレビューへ |
+| AC 数の一致 | 15% | ストーリーごとの受入基準の数 |
+| 技術用語の保持 | 15% | WCAG 2.1 / AA / TTS / PayPay などが特定言語で消えていないか |
+| 意味の重なり | 20% | 逆翻訳またはクロスリンガルベクトルと基準言語の類似度 |
+
+**3 つの方式**（`CONSISTENCY_METHOD`）：
+
+| 方式 | 追加コスト | 説明 |
+| --- | --- | --- |
+| `structural`（既定） | なし | 決定的シグナルのみ（ID／数値／AC／用語）。完全オフラインで再現可能 |
+| `backtranslate` | 1 ラウンドあたり 1〜N 回のモデル呼び出し | 非基準言語の PRD を基準言語へ逆翻訳して比較。**長い PRD は自動分割、失敗した分割は二分リトライ、基準言語になっていない結果は破棄** |
+| `embeddings` | 1 ラウンドあたり 1 回のベクトル呼び出し | 逆翻訳の代わりにクロスリンガル類似度を使用（`/embeddings` が必要） |
+
+**判定**：総合または各ストーリーが `CONSISTENCY_BLOCKER_SCORE`（既定 50）未満 → blocker（次ラウンドへ差し戻し）／`CONSISTENCY_MIN_SCORE`（既定 75）未満 → major（レビュー・チェックリスト）／用語が本文に現れる割合が 60% 未満 → minor。
+**意味のハード拒否**：基準言語との生の類似度が 0.30 未満なら、構造がどれだけ整っていても重大なドリフトと判定します。
+
+> 閾値は実モデルの出力で較正した経験値です（忠実な逆翻訳は生 Dice 0.50〜0.75、サンプルは [docs/HANDOVER.md](docs/HANDOVER.md)）。したがって 0.50 以上を忠実とみなします。
+> これは「意味が等価」の証明ではなく、**人手レビューの順位付け**のための指標です（基準言語と逆翻訳の対比テキスト付き）。
+> 正確な判据は決定的シグナル（ID／数値／AC／用語）で、意味シグナルは重み 20% に留めています。
+>
+> 出力例：[docs/example-consistency.json](docs/example-consistency.json)
+
+![一致性パネル](docs/screenshots/04-consistency.png)
 
 ---
 
@@ -160,11 +198,19 @@ OpenAI 互換の `/chat/completions` であれば何でも使えます（OpenAI 
 | `LLM_TEMPERATURE` | `0.2` | サンプリング温度 |
 | `LLM_TIMEOUT_SECONDS` | `120` | 1 リクエストのタイムアウト |
 | `LLM_MAX_RETRIES` | `3` | 指数バックオフ付きリトライ回数 |
-| `MAX_VALIDATION_ROUNDS` | `3` | 検証ラウンド上限。**1 にすると実モデルでも 1 ラウンドで終了** |
+| `MAX_VALIDATION_ROUNDS` | `3` | 検証ラウンド上限。blocker が無ければ追加は 1 ラウンドのみ。**1 なら 1 ラウンドで終了** |
+| `CONSISTENCY_METHOD` | `structural` | `structural` / `backtranslate` / `embeddings` / `off` |
+| `CONSISTENCY_MIN_SCORE` | `75` | これ未満は major（レビュー・チェックリスト） |
+| `CONSISTENCY_BLOCKER_SCORE` | `50` | これ未満は blocker（次ラウンドへ差し戻し） |
+| `BACKTRANSLATE_CHUNK_CHARS` | `4000` | 逆翻訳リクエストの分割サイズ（小さいほど切り詰められにくい） |
+| `EMBEDDINGS_BASE_URL` / `EMBEDDINGS_API_KEY` / `EMBEDDINGS_MODEL` | LLM 設定を継承 / `text-embedding-3-small` | `embeddings` 方式のみ必要 |
+| `LLM_MAX_TOKENS` | サーバ既定 | 出力が切り詰められ JSON 解析に失敗する場合に明示（例：`8192`） |
 | `MAX_INPUT_CHARS` | `4000` | 入力長の上限 |
 | `CORS_ORIGINS` | `localhost:3000,...` | 許可するフロントエンドのオリジン |
 
-> 実モデルでは 1 ラウンド約 30〜60 秒（構造化 + 検証で各 1 コール）。既定は最大 3 ラウンドで、指摘数が減らなくなれば早期終了します。
+> 実モデルでは 1 ラウンド約 30〜90 秒（構造化 + 検証で各 1 コール、`backtranslate` 方式では逆翻訳が 1〜N 回追加）。
+> 既定は最大 3 ラウンドですが、**blocker が無ければ追加は 1 ラウンドのみ**で、指摘数が減らなくなれば早期終了し、最も良いラウンドを納品します。
+> 速度優先なら `MAX_VALIDATION_ROUNDS=1`、または既定の `CONSISTENCY_METHOD=structural`（追加コストなし）のまま。
 
 ---
 
@@ -186,9 +232,18 @@ curl -s http://localhost:8000/api/generate \
   "glossary": [{ "term_zh": "...", "term_en": "...", "term_ja": "...", "note": "..." }],
   "markdown": { "zh": "# ...", "ja": "# ...", "en": "# ..." },
   "clarifications": { "goal": "...", "success_metrics": [], "assumptions": [], "open_questions": [] },
+  "consistency": {
+    "method": "backtranslate",               // structural | backtranslate | embeddings
+    "pivot": "zh",
+    "overall": 96.4,                         // 0〜100
+    "terminology_coverage": 0.89,
+    "pairs": [{ "lang": "ja", "score": 92.2, "components": { "ids": 1.0, "numeric": 1.0, "entity": 1.0, "semantic": 0.61 } }],
+    "divergences": [{ "lang": "en", "story_id": "US-2", "score": 62.0, "reason": "同一 AC 内の数値閾値が不一致: ..." }]
+  },
   "validation": {
     "passed": true,
     "status": "needs_review",                 // passed | needs_review | blocked
+    "consistency_score": 96.4,
     "counts": { "blocker": 0, "major": 3, "minor": 1 },
     "issues": [{ "severity": "major", "category": "testability", "message": "...", "suggestion": "..." }]
   },
@@ -242,8 +297,9 @@ pytest -q                     # 43 passed（オフライン・API 課金なし�
 ruff check app tests
 ```
 
-対象：LLM の JSON 寛容性とリトライ、Mock の決定性、構造チェック（言語欠落・ストーリー数・AC・用語表）、
-検証の意味づけ（blocker はブロック、major はチェックリストのみ）、反復の収束・上限・早期停止、
+対象：LLM の JSON 寛容性・切り詰め救済・リトライ、Mock の決定性、構造チェック（言語欠落・ストーリー数・AC・用語表）、
+検証の意味づけ（blocker はブロック、major はチェックリストのみ）、反復の収束・上限・早期停止・blocker 無しの追加 1 ラウンド・最良ラウンドの納品、
+三言語一致性（ID 対応・AC 数・数値閾値の衝突・技術用語の保持・用語カバレッジ・意味のハード拒否・逆翻訳の言語検証・分割と二分リトライ・ベクトル方式）、
 API のバリデーションとエラーコード、SSE イベント順序、Markdown レンダリング。
 
 CI 定義のサンプルは [`docs/ci-workflow.example.yml`](docs/ci-workflow.example.yml)。`.github/workflows/ci.yml` にコピーすれば有効化できます
@@ -253,7 +309,7 @@ CI 定義のサンプルは [`docs/ci-workflow.example.yml`](docs/ci-workflow.ex
 
 - [x] **v0.1** 3 段階パイプラインの骨組み + PRD テンプレート + Docker Compose
 - [x] **v0.2** 実 LLM 接続（OpenAI 互換 + Mock 降格）、三言語 PRD と用語対訳表、判定可能な検証と早期停止、SSE 進捗、Next.js UI、実モデルによる出力例
-- [ ] **v0.3** 三言語整合性の深化：逆翻訳 + 埋め込み類似度によるスコアリング
+- [x] **v0.3** 三言語一致性の定量スコア：決定的シグナル（ID／数値閾値／AC 数／技術用語）＋逆翻訳またはクロスリンガルベクトル。低スコア項目は対比テキスト付きでリスク順に提示。長い PRD の分割逆翻訳・二分リトライ・言語検証つき
 - [ ] **v0.4** [VoC Agent](https://github.com/shiyuanyeming-hub/voc-agent) 連携：レビューの痛点 → 要件ドラフト → PRD
 - [ ] **v0.5** PRD のバージョン diff と Confluence / Notion / Jira へのエクスポート
 - [ ] **v0.6** 用語表の永続化（チーム用語集として要件をまたいで再利用）

@@ -1,108 +1,107 @@
-# Payment Flow Optimization for Older Adult Users PRD (Japan Market)
+# Payment Flow Optimization for Older Adults PRD (Japan Market)
 
 > **Source Requirement**：日本市场想要一个能让老年用户更容易用的支付流程，现在很多高龄用户走到支付页就放弃了，大概下个季度要上线，最好也能覆盖我们自己的 App 和网页端。
 
 ## Background
-Older adult users (65+) in the Japan market have a high abandonment rate on the payment page, and the current baseline needs to be obtained through tracking funnels. Optimize the payment flow on our own app and web to reduce abandonment and improve completion by simplifying the interface, enlarging fonts, reducing steps, and adding guidance. Target launch by the end of next quarter, covering our own app and web.
+Older adult users (65+) in the Japan market have a high abandonment rate after reaching the payment page on our own app and web. The current baseline is assumed to be 38% but needs confirmation with actual data. Older adults may face barriers with complex operations, small fonts, and multi-step flows. The project is planned for launch next quarter, covering our own app and web, without backend re-architecture or changes for other age groups.
 
 ## Goal
-Optimize the payment flow for older adult users in the Japan market to reduce payment page abandonment, improve payment completion, and launch by the end of next quarter covering our own app and web. Specific quantitative goals: reduce payment page abandonment rate for older adult users by 20% relative to baseline; increase payment completion rate to 70%; reduce average payment flow completion time to under 3 minutes; reduce payment-related customer support ticket volume by 15%. Baseline acquisition: use payment page tracking funnel, compare one full calendar month before and after optimization, with user age identified via account profile or survey. If baseline cannot be obtained, add tracking first and establish baseline before launch.
+Optimize the payment flow for older adult users in the Japan market to reduce payment page abandonment rate to below 25%, increase payment completion rate to above 70%, shorten average completion time to under 3 minutes, reduce payment-related customer support complaints by 30%, achieve a usability test task completion rate of 90% or higher, and launch next quarter on our own app and web.
 
 ## Success Metrics
-- 高龄用户支付页放弃率从当前基线降低20%（相对值），测量口径：支付页埋点漏斗，对比优化前后各一个完整自然月的数据，用户年龄通过账户资料或问卷标识。
-- 高龄用户支付完成率提升至70%，测量口径：支付成功事件数除以进入支付页事件数，按用户年龄分组统计。
-- 高龄用户支付流程平均完成时间缩短至3分钟以内，测量口径：从进入支付页到支付成功的时间戳差值，取中位数。
-- 高龄用户支付相关客服工单量下降15%，测量口径：客服系统中标记为支付问题的工单数，按用户年龄分组。
+- 高龄用户支付页放弃率从当前基线（需确认）降低至25%以下，测量口径：支付页埋点漏斗中，进入支付页但未完成支付的用户占比，按年龄段（65+）拆分。
+- 高龄用户支付完成率提升至70%以上，测量口径：支付成功事件数 / 进入支付页事件数，按年龄段（65+）拆分。
+- 高龄用户支付流程平均完成时长缩短至3分钟以内，测量口径：从进入支付页到支付成功的时间戳差值，取中位数。
+- 高龄用户支付相关客服投诉量下降30%，测量口径：客服系统中标记为支付问题的工单数，按用户年龄段（65+）筛选，对比上线前后一个月。
+- 高龄用户支付流程任务完成率（可用性测试）达到90%以上，测量口径：招募20名65岁以上日本用户进行可用性测试，成功完成支付任务的比例。
 
 ## Stated Assumptions
-- 假设高龄用户指65岁及以上，具体年龄阈值需确认。
-- 假设当前支付页放弃率基线可通过现有埋点获取，若无法获取则需先补充埋点。
-- 假设优化措施包括但不限于：大字体、高对比度、简化步骤、语音辅助、进度指示。
-- 假设下个季度上线指自然季度末前，具体日期需确认。
-- 假设自有App和网页端使用同一套支付流程逻辑，可复用优化方案。
+- 假设高龄用户指65岁及以上人群，这是日本市场常见的老年定义。
+- 假设当前支付页放弃率基线为38%（基于行业常见数据），但需实际数据确认。
+- 假设下个季度上线指从当前日期起3个月内完成开发并发布。
+- 假设自有App和网页端使用同一套支付后端，前端可独立优化。
+- 假设日本市场常用支付方式包括信用卡、便利店支付、银行转账、电子货币等，优化需覆盖这些方式。
+- 假设可用性测试可在上线前完成，并招募到足够的高龄用户。
+- 假设支付页放弃率可通过现有埋点系统按年龄段拆分，若无法拆分则需新增埋点。
 
 ## User Stories
 
-### US-1 · As an older adult user in the Japan market, I can use a payment interface with large fonts and high contrast, so that I can read payment information more easily and complete payment.
+### US-1 · As an older adult user in the Japan market, I can see enlarged and high-contrast text and buttons on the payment page, so that I can easily read and tap them.
 
-- Acceptance Criteria：Payment page font size is at least 18pt, and a font enlargement toggle is provided; after toggling, font size is at least 24pt.
-- Acceptance Criteria：Payment page text-to-background contrast ratio is at least 4.5:1, compliant with WCAG 2.1 AA.
-- Acceptance Criteria：Large font and high contrast modes are effective on iOS and Android own app and web.
+- Acceptance Criteria：Body text on the payment page is at least 18pt, buttons are at least 48pt in height, and text-to-background contrast ratio is at least 4.5:1.
+- Acceptance Criteria：In usability testing, at least 18 out of 20 Japanese users aged 65+ can identify the main action button without assistance.
 
-### US-2 · As an older adult user in the Japan market, I can complete payment with simplified steps, so that I can reduce operational burden and complete payment quickly.
+### US-2 · As an older adult user in the Japan market, I can complete payment using a simplified flow of no more than 3 steps, so that I reduce operational burden and abandonment.
 
-- Acceptance Criteria：Payment flow steps are reduced by at least 2 steps from the current baseline, and total steps do not exceed 4.
-- Acceptance Criteria：Each step retains only one primary action button (the button with the highest visual hierarchy in the main action area), and no more than one secondary action (text link or secondary button).
-- Acceptance Criteria：Payment flow step count is consistent between own app and web.
+- Acceptance Criteria：The required steps from entering the payment page to successful payment are no more than 3 (select payment method, confirm amount, complete payment).
+- Acceptance Criteria：In usability testing, at least 18 out of 20 Japanese users aged 65+ can complete payment independently within 3 minutes.
 
-### US-3 · As an older adult user in the Japan market, I can use Japanese voice guidance to assist with payment operations, so that I can understand the payment flow even with declining vision or cognitive ability.
+### US-3 · As an older adult user in the Japan market, I can use common Japanese payment methods (credit card, convenience store payment, bank transfer, e-money), so that I can choose a method I am familiar with.
 
-- Acceptance Criteria：Voice guidance supports Japanese, and based on TTS engine output parameters, speech rate is set to no more than 180 Japanese characters per minute.
-- Acceptance Criteria：Voice guidance automatically plays at each step of the payment flow, and a replay button is provided.
-- Acceptance Criteria：Voice guidance volume is adjustable, and default volume is at least 50% of device maximum volume.
+- Acceptance Criteria：The payment page displays at least four payment methods: credit card, convenience store payment, bank transfer, and e-money.
+- Acceptance Criteria：The entry point for each payment method is visible on the first screen of the payment page, with at least three visible without scrolling.
 
-### US-4 · As an older adult user in the Japan market, I can see a clear progress indicator, so that I can understand the current payment progress and remaining steps.
+### US-4 · As an older adult user in the Japan market, I can see error messages in large Japanese text with clear resolution suggestions when a payment error occurs, so that I know how to correct it.
 
-- Acceptance Criteria：Payment page displays a progress indicator showing current step and total steps (e.g., "Step 2/4").
-- Acceptance Criteria：Progress indicator is visible on both own app and web, with font size at least 16pt.
-- Acceptance Criteria：Progress indicator updates in real time after each payment operation.
+- Acceptance Criteria：Error messages use a font size of at least 18pt, are in Japanese, and include at least one specific resolution suggestion (e.g., 'Please check your card number').
+- Acceptance Criteria：In usability testing, at least 18 out of 20 Japanese users aged 65+ can independently correct the error based on the error message.
 
-### US-5 · As an older adult user in the Japan market, I can get a consistent payment experience on own app and web, so that I can complete payment smoothly on either channel.
+### US-5 · As an older adult user in the Japan market, I can see the current step and progress indicator at any time during payment, so that I understand how many more operations are needed.
 
-- Acceptance Criteria：After the same account enters the payment page on own app and web, the payment completion rate difference is no more than 5 percentage points. Statistical scope: calculated per calendar month, only for the older adult user group, sample size at least 1000, and the payment completion rate difference is an absolute value.
-- Acceptance Criteria：Payment flow steps, interface layout, and guidance text are consistent between own app and web.
-- Acceptance Criteria：Average payment flow completion time difference between own app and web is no more than 30 seconds.
+- Acceptance Criteria：The payment page displays a step indicator (e.g., 'Step 1 of 3') with clear progress marking for each step.
+- Acceptance Criteria：In usability testing, at least 18 out of 20 Japanese users aged 65+ can correctly state the current step and number of remaining steps.
 
 ## Functional Requirements
-- Payment page supports large font mode, font size at least 18pt, switchable to 24pt or more.
-- Payment page supports high contrast mode, text-to-background contrast ratio at least 4.5:1.
-- Payment flow steps reduced to no more than 4 steps, with only one primary action button per step.
-- Integrate Japanese TTS engine to provide voice guidance, speech rate no more than 180 Japanese characters per minute.
-- Payment page displays progress indicator showing current step and total steps.
-- Own app and web use the same payment flow logic to ensure consistency.
-- Provide age identification mechanism to identify older adult users via account profile or survey.
-- Tracking records events such as payment page entry, payment success, and payment failure to calculate abandonment rate, completion rate, and completion time.
+- The payment page supports font enlargement, with a default font size of at least 18pt and a one-tap option to enlarge to 24pt.
+- Reduce the payment flow steps from the current number to no more than 3, merging redundant confirmation pages.
+- Display four payment methods on the first screen: credit card, convenience store payment, bank transfer, and e-money, and remember the last used method.
+- Error messages use large text (at least 18pt), Japanese, high contrast, and include specific resolution suggestions.
+- The payment page displays a step indicator and progress bar, clearly showing the current step and total steps.
+- Our own app and web use the same payment backend, with independent frontend optimization to ensure a consistent experience.
+- The tracking system segments payment page funnel data by age group (65+); if not possible, add new tracking.
 
 ## Non-Functional Requirements
-- Payment page load time no more than 3 seconds on 4G network.
-- Voice guidance response time no more than 1 second.
-- System availability no less than 99.9%.
-- Comply with Japanese local accessibility regulations (e.g., JIS X 8341-3) and WCAG 2.1 AA.
-- Support Japanese and English interfaces, default Japanese.
+- Payment page load time is under 3 seconds on a 4G network.
+- Usability testing for the payment flow recruits 20 Japanese users aged 65+ in Tokyo or Osaka and is conducted on real devices.
+- The payment page complies with Japanese accessibility standards (JIS X 8341-3) Level AA.
+- Payment-related customer support complaints are filtered by age group (65+) and compared one month before and after launch.
+- Payment flow optimization does not involve backend re-architecture, and frontend changes do not affect users in other age groups.
 
 ## Risks
-- The age identification method for older adult users is unconfirmed, which may affect metric grouping and implementation of optimization measures.
-- The current payment page abandonment baseline may not be obtainable from existing tracking, requiring additional tracking and potentially delaying launch.
-- Whether own app and web use the same payment flow is unconfirmed, and there may be technical limitations.
-- Japanese local regulations or accessibility standards are unclear, which may require additional compliance work.
-- Budget or resource constraints for optimization measures are unconfirmed, which may affect implementation scope.
-- Voice guidance speech rate settings may vary by device or TTS engine, affecting consistency.
+- The current payment page abandonment rate of 38% is an assumption; if the actual baseline differs, target thresholds need re-evaluation.
+- If the definition of older adult users is not ultimately 65+, tracking segmentation and test recruitment need adjustment.
+- The launch date next quarter is unspecified; if the hard deadline is earlier than 3 months, scope may need to be reduced.
+- It is unconfirmed whether our own app and web share the same payment flow; if not, they need separate optimization.
+- Common Japanese payment methods may include others (e.g., PayPay); adding them would involve business negotiations.
+- Usability test recruitment channels and budget are unconfirmed, which may affect the test schedule.
+- Payment flow optimization may involve compliance or security review; special regulatory requirements for older users in Japan are unconfirmed.
+- It is unconfirmed whether the customer support system can filter by age group; if not, new fields need to be added.
 
 ## Open Questions
-1. What is the specific age definition for older adult users? If determined as 65+, only the identification method (account age, device settings, or survey) needs confirmation.
-2. What is the current baseline payment page abandonment rate for older adult users? How to obtain it? If unobtainable, how to establish a baseline?
-3. What is the specific deadline for launch next quarter?
-4. Do own app and web use the same payment flow? Are there technical limitations?
-5. Are there Japanese local regulations or accessibility standards to comply with?
-6. Are there budget or resource constraints for optimization measures?
-7. How to identify older adult users? Via account age, device settings, or other methods?
-8. Are baseline data for success metrics (current abandonment rate, completion rate, completion time, ticket volume) obtainable? If not, how to establish a baseline?
-9. Measurement scope for voice guidance speech rate: based on TTS engine output parameters or manual evaluation?
+1. What is the accurate baseline for the current payment page abandonment rate among older adult users? Is the measurement segmented by age group?
+2. What is the specific definition of older adult users? Is it 65+ or another standard?
+3. What is the specific launch date next quarter? Is there a hard deadline?
+4. Do our own app and web share the same payment flow? Do they need separate optimization?
+5. What are the most commonly used payment methods among older adult users in the Japan market? Do we need to add or adjust payment methods?
+6. Are there existing usability test resources or recruitment channels? What are the test budget and sample size requirements?
+7. Does payment flow optimization involve compliance or security review? Are there special regulatory requirements for older users in Japan?
+8. Are the thresholds in the success metrics (e.g., abandonment rate below 25%, completion rate above 70%) reasonable? What are the requester's expected target values?
+9. How is 'payment-related customer support complaints from older adult users' defined and measured? Can the existing support system filter by age group?
+10. Does the optimized payment flow need to support multiple languages (e.g., Japanese and English)?
 
 ## Glossary
 
 | zh | en | ja | note |
 | --- | --- | --- | --- |
-| 高龄用户 | Older adult users | 高齢ユーザー | 本项目指日本市场65岁及以上的支付用户；年龄识别方式待确认，见 open_questions。 |
-| 支付页放弃率 | Payment page abandonment rate | 支払いページ離脱率 | 进入支付页后未完成支付的会话数除以进入支付页的会话数，按高龄用户分组统计。 |
-| 支付完成率 | Payment completion rate | 支払い完了率 | 支付成功事件数除以进入支付页事件数，按高龄用户分组统计。 |
-| 支付流程平均完成时间 | Average payment flow completion time | 支払いフロー平均完了時間 | 从进入支付页到支付成功的时间戳差值，取中位数。 |
-| 支付相关客服工单量 | Payment-related customer support ticket volume | 支払い関連カスタマーサポートチケット数 | 客服系统中标记为支付问题的工单数，按高龄用户分组统计。 |
-| 主要操作 | Primary action | 主要操作 | 视觉层级最高、位于主操作区的按钮，用于推进支付流程。 |
-| 次要操作 | Secondary action | 二次操作 | 文字链接或次级按钮，用于返回、取消、查看帮助等非推进支付流程的操作。 |
-| 语音提示 | Voice guidance | 音声ガイダンス | 通过TTS引擎输出的日语语音提示，用于辅助高龄用户完成支付。 |
-| 进度指示 | Progress indicator | 進捗インジケーター | 显示当前步骤和剩余步骤的视觉元素。 |
-| 大字体模式 | Large font mode | 大文字モード | 支付页字体放大至至少18pt，可切换。 |
-| 高对比度模式 | High contrast mode | ハイコントラストモード | 支付页文字与背景对比度至少4.5:1，符合WCAG 2.1 AA。 |
+| 高龄用户 | Older adult users | 高齢ユーザー | 本项目指日本市场65岁及以上的用户；若需求方最终定义不同，需同步更新所有语种文档与埋点口径。 |
+| 支付页 | Payment page | 支払いページ | 用户进入后开始选择支付方式并确认支付的页面；漏斗起点为该页面的曝光事件。 |
+| 支付页放弃率 | Payment page abandonment rate | 支払いページ離脱率 | 进入支付页但未完成支付的用户占比，按年龄段（65+）拆分。 |
+| 支付完成率 | Payment completion rate | 支払い完了率 | 支付成功事件数 ÷ 进入支付页事件数，按年龄段（65+）拆分。 |
+| 支付流程平均完成时长 | Average payment flow completion time | 支払いフロー平均完了時間 | 从进入支付页到支付成功的时间戳差值，取中位数。 |
+| 支付相关客服投诉量 | Payment-related customer support complaints | 支払い関連のカスタマーサポート苦情件数 | 客服系统中标记为支付问题的工单数，按用户年龄段（65+）筛选。 |
+| 可用性测试任务完成率 | Usability test task completion rate | ユーザビリティテストのタスク完了率 | 招募20名65岁以上日本用户进行可用性测试，成功完成支付任务的比例。 |
+| 便利店支付 | Convenience store payment | コンビニ決済 | 日本常用支付方式之一，用户在线下便利店完成付款。 |
+| 银行转账 | Bank transfer | 銀行振込 | 日本常用支付方式之一，用户通过银行账户转账完成付款。 |
+| 电子货币 | E-money | 電子マネー | 日本常用支付方式之一，如交通系IC卡等。 |
 
-<!-- Validation issues fixed in this round: [major/testability] zh/ja/en 三语种 PRD 的 goal 与 background 均未给出可量化的成功指标（如支付页放弃率下降幅度、支付完成率提升幅度），而 open_questions 中却提到「支付相关客服工单量下降15%」等指标，目标与开放问题不一致，无法判定上线是否达成业务目标。 → 修改建议：在 goal 中补充可量化目标，例如「支付页放弃率相对基线下降 X%」「支付完成率提升至 Y%」「支付相关客服工单量下降 15%」，并明确基线获取方式；若基线待定，需在 goal 中标注为待确认并给出占位符说明。；[major/testability] zh/ja/en 三语种 PRD 的 US-3 验收标准「语音提示支持日语，语速不高于每分钟180个日语字符」中，180 字符/分钟是否对应可理解语速缺少依据，且未定义如何测量（合成语音参数、播放速率还是人工评估），难以判定通过/不通过。 → 修改建议：补充测量口径，例如「以 TTS 引擎输出参数为准，语速设置为不超过 180 日语字符/分钟」，或改为可客观测量的指标（如「语速档位不超过 X 档」）。；[major/testability] zh/ja/en 三语种 PRD 的 US-5 验收标准「同一账户在自有App和网页端进入支付页后，支付完成率差异不超过5个百分点」缺少统计口径：未说明统计周期、样本量下限、是否按高龄用户分组，以及差异是绝对值还是相对值，难以判定。 → 修改建议：补充统计口径，例如「按自然月统计，仅统计高龄用户分组，样本量不少于 N，支付完成率差值为绝对值且不超过 5 个百分点」。；[major/testability] zh/ja/en 三语种 PRD 的 US-2 验收标准「每一步只保留一个主要操作按钮，次要操作不超过一个」中，「主要操作」与「次要操作」未定义判定标准，不同评审人可能得出不同结论。 → 修改建议：补充定义，例如「主要操作按钮指视觉层级最高、位于主操作区的按钮；次要操作为文字链接或次级按钮」，或给出具体页面元素清单。；[major/completeness] zh/ja/en 三语种 PRD 的 risks 与 open_questions 均提到高龄用户年龄识别方式未确认，但 glossary 中「高龄用户」注释已写明「本项目指日本市场65岁及以上的支付用户」，二者存在潜在矛盾：若已定义 65 岁及以上，则年龄识别方式与阈值应统一，否则指标分组无法落地。 → 修改建议：统一术语与开放问题：若确定 65 岁及以上，则在 open_questions 中删除「年龄定义」问题，仅保留「识别方式」问题；若未确定，则 glossary 注释应改为待确认，避免前后矛盾。 -->
+<!-- Validation issues fixed in this round: [major/testability] US-3 的验收标准「每种支付方式的选择入口在支付页首屏可见，无需滚动即可看到至少三种」缺少可判定的阈值（如首屏高度、设备分辨率、可见比例），无法客观判定通过/不通过。涉及语种：zh、ja、en。 → 修改建议：在 US-3 验收标准中补充可判定条件，例如：在 375×667 及以上常见移动端视口下，至少三种支付方式入口的完整可点击区域位于首屏内（无需滚动），并明确测试设备/浏览器清单。；[major/testability] US-5 的验收标准「每一步都有明确的进度标识」中「明确」无判定标准，无法客观验收。涉及语种：zh、ja、en。 → 修改建议：将「明确的进度标识」改为可判定表述，例如：每一步均显示「步骤 N/总数」文本或等效进度条，且进度条填充比例与当前步骤数一致（如第 2/3 步时填充约 66%）。；[major/testability] 目标中的「支付页放弃率降至 25% 以下」「支付完成率提升至 70% 以上」「平均完成时长缩短至 3 分钟以内」「客服投诉量下降 30%」均基于假设基线 38%，但未标注为待验证假设，也未定义测量窗口与统计口径，存在验收争议风险。涉及语种：zh、ja、en。 → 修改建议：在 goal 中显式标注「基线 38% 为假设值，需以实际数据确认后锁定目标」，并为每个指标补充测量窗口（如上线后 4 周）、数据来源与统计口径（分子/分母、年龄段筛选方式）。；[major/completeness] 风险项与待确认问题未覆盖「优化后的支付流程是否需要支持多语言（日语和英语）」这一输入中的不确定性；该问题仅出现在 open_questions 中，未在 risks 中体现其对范围与验收的影响。涉及语种：zh、ja、en。 → 修改建议：在 risks 中新增一条：若优化后的支付流程需支持多语言（日语/英语），将影响文案、错误提示与可用性测试设计，需评估范围与排期；并在 open_questions 中保留对应问题。；[major/completeness] 风险项未覆盖「可用性测试样本量 20 名 65+ 用户是否足以支撑 90% 完成率目标」的统计不确定性，也未说明若招募不足时的替代方案。涉及语种：zh、ja、en。 → 修改建议：在 risks 中补充：20 名样本量对 90% 完成率的置信区间较宽，若招募不足或样本偏差，可能影响结论；建议明确最小可接受样本量与备选招募渠道。 -->

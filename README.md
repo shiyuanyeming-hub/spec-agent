@@ -3,7 +3,7 @@
 > 把一句模糊的需求，变成中日英三语对齐的标准 PRD。
 > Turn a vague one-liner into an aligned zh / ja / en PRD — before development starts.
 
-[![Status](https://img.shields.io/badge/status-v0.2-blue)]() [![Python](https://img.shields.io/badge/python-3.11+-blue)]() [![Next.js](https://img.shields.io/badge/Next.js-14-black)]() [![Tests](https://img.shields.io/badge/tests-43%20passed-brightgreen)]() [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Status](https://img.shields.io/badge/status-v0.3-blue)]() [![Python](https://img.shields.io/badge/python-3.11+-blue)]() [![Next.js](https://img.shields.io/badge/Next.js-14-black)]() [![Tests](https://img.shields.io/badge/tests-65%20passed-brightgreen)]() [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 [English](README.en.md) · [日本語](README.ja.md)
 
@@ -26,6 +26,7 @@
 | 🌐 **多语种对齐输出** | 一次输入产出 zh/ja/en 三份 PRD，用户故事编号一一对应，不是逐字翻译而是本地化表达 |
 | 📒 **术语对照表** | 关键术语三语对照（如「验收标准 / Acceptance Criteria / 受入基準」），从源头消灭术语漂移 |
 | ✅ **可判定的校验语义** | 确定性结构校验（缺语种、故事数量不一致、缺 AC…）+ LLM 语义校验（INVEST、可测试性、三语等价） |
+| 📐 **三语一致性打分** | 0~100 的量化一致性分数：故事编号 / 数字阈值 / AC 数量 / 技术词 + 回译或跨语言向量，低分条目按风险排序供人工复核 |
 | 🔁 **校验回注迭代** | 校验不通过 → 问题回注 Structurer 重写；问题数不再下降时自动止损，不做无意义的 token 燃烧 |
 | 🧭 **假设显式化** | 信息缺失时不偷偷替需求方拍板：补全的部分标为「显式假设」，必须确认的进 Open Questions |
 | 🚫 **反占位符** | 提示词层面禁止 `X%` / `TBD` / `待定`，指标必须给出阈值 + 测量口径，否则进 Open Questions |
@@ -39,7 +40,7 @@
 
 > 日本市场想要一个能让老年用户更容易用的支付流程，现在很多高龄用户走到支付页就放弃了，大概下个季度要上线，最好也能覆盖我们自己的 App 和网页端。
 
-运行 `python scripts/smoke.py --sample jp-senior-payment` 后（真实模型 `deepseek-chat`，2 轮迭代）得到的三语 PRD 节选：
+运行 `python scripts/smoke.py --sample jp-senior-payment` 后（真实模型 `deepseek-chat`，2 轮迭代，三语一致性 97 分）得到的三语 PRD 节选：
 
 ```markdown
 ## 成功指标
@@ -61,6 +62,7 @@
 - [docs/example-output.zh.md](docs/example-output.zh.md)
 - [docs/example-output.ja.md](docs/example-output.ja.md)
 - [docs/example-output.en.md](docs/example-output.en.md)
+- [docs/example-consistency.json](docs/example-consistency.json) —— 同一次运行的一致性评分（整体 97.1，中文↔日本語 98.6，中文↔English 98.1，无低分条目）
 
 界面截图（见 [docs/screenshots](docs/screenshots)）：
 
@@ -105,6 +107,42 @@
 | `minor` | 表述、覆盖度、可读性建议 | 否 |
 
 流水线在一轮内同时产出「PRD」和「评审清单」；只有当问题数**严格下降**时才继续下一轮，否则提前止损（`stalled = true`），把剩余问题交给人。
+没有 blocker 时最多再迭代一次——后续轮次多半只是措辞抖动，而且模型抖动可能让某一轮变差，因此**交付的是所有轮次里排序最优的那一轮**（无 blocker 优先，其次看加权分）。
+
+---
+
+## 三语一致性量化评分
+
+"三个语种说的是不是同一件事"可以被量化。每份 PRD 都带一个 0~100 的一致性分数，并把需要人工复核的条目按风险排序列出来。
+
+**评分模型**（每对语种，权重合计 100%）：
+
+| 信号 | 权重 | 判据 |
+| --- | --- | --- |
+| 故事编号覆盖 | 25% | 各语种故事编号是否一一对应（漏译 / 多译直接扣分） |
+| 数字阈值一致 | 25% | 把同一条 AC 对齐后逐条比数字：18pt vs 24pt、3 步 vs 4 步…（同一条 AC 数字完全冲突时压到 55 分以下送人工） |
+| AC 数量对齐 | 15% | 每条故事的验收标准条数是否一致 |
+| 技术词保留 | 15% | WCAG 2.1 / AA / TTS / PayPay 这类词不该在某语种里消失 |
+| 语义重合 | 20% | 回译或跨语言向量与基准语种的相似度（见下） |
+
+**三种方法**（`CONSISTENCY_METHOD`）：
+
+| 方法 | 额外成本 | 说明 |
+| --- | --- | --- |
+| `structural`（默认） | 0 | 只用确定性信号（编号 / 数字 / AC / 技术词），完全离线、可复现 |
+| `backtranslate` | 每轮 1~N 次模型调用 | 把非基准语种 PRD 回译到基准语言后比对词面重合；**长 PRD 自动分片，分片失败自动二分重试，回译语言不符会被忽略** |
+| `embeddings` | 每轮 1 次向量调用 | 用跨语言向量相似度替代回译（需要 `/embeddings` 接口） |
+
+**判定规则**：整体或单条故事低于 `CONSISTENCY_BLOCKER_SCORE`（默认 50）→ blocker（触发下一轮修正）；低于 `CONSISTENCY_MIN_SCORE`（默认 75）→ major（进评审清单）；术语在正文里的出现率 < 60% → minor。
+**语义硬否决**：回译/向量与基准语种几乎无重合（原始相似度 < 0.30）时，不论结构多整齐都判为严重漂移。
+
+> 阈值是用真实模型样本校准的经验值：忠实回译的原始 Dice 落在 0.50~0.75（样本见 [docs/HANDOVER.md](docs/HANDOVER.md)），因此 0.50 以上视为忠实。
+> 它不是"语义等价"的证明，作用是**给人工复核排序**——把最可能出问题的故事排到最前面，并附上基准语种与回译结果的对照文本。
+> 确定性信号（编号 / 数字 / AC / 技术词）才是精确判据，语义信号只占 20%。
+>
+> 输出示例：[docs/example-consistency.json](docs/example-consistency.json)
+
+![三语一致性面板](docs/screenshots/04-consistency.png)
 
 ---
 
@@ -166,11 +204,19 @@ python scripts/smoke.py "让客服系统支持批量导出季度报表" --langs 
 | `LLM_TEMPERATURE` | `0.2` | 采样温度 |
 | `LLM_TIMEOUT_SECONDS` | `120` | 单次请求超时 |
 | `LLM_MAX_RETRIES` | `3` | 失败重试次数（指数退避） |
-| `MAX_VALIDATION_ROUNDS` | `3` | 最多校验轮次；**设为 1 可把真实模型耗时压到 1 轮** |
+| `MAX_VALIDATION_ROUNDS` | `3` | 最多校验轮次；无 blocker 时只会再迭代 1 次，**设为 1 可压到 1 轮** |
+| `CONSISTENCY_METHOD` | `structural` | 一致性评分方法：`structural` / `backtranslate` / `embeddings` / `off` |
+| `CONSISTENCY_MIN_SCORE` | `75` | 低于此分记为 major（进评审清单） |
+| `CONSISTENCY_BLOCKER_SCORE` | `50` | 低于此分记为 blocker（触发下一轮修正） |
+| `BACKTRANSLATE_CHUNK_CHARS` | `4000` | 回译请求的分片大小（越小越不容易被截断） |
+| `EMBEDDINGS_BASE_URL` / `EMBEDDINGS_API_KEY` / `EMBEDDINGS_MODEL` | 跟随 LLM 配置 / `text-embedding-3-small` | 仅 `embeddings` 方法需要 |
+| `LLM_MAX_TOKENS` | 服务端默认 | 输出被截断（JSON 解析失败）时显式调大，例如 `8192` |
 | `MAX_INPUT_CHARS` | `4000` | 输入长度上限 |
 | `CORS_ORIGINS` | `localhost:3000,...` | 允许的前端来源 |
 
-> 真实模型一轮约 30–60 秒（结构化 + 校验各一次调用），默认最多 3 轮，且问题数不再下降时会提前结束。追求速度可以设 `MAX_VALIDATION_ROUNDS=1`。
+> 真实模型一轮约 30–90 秒（结构化 + 校验各一次调用，`backtranslate` 方法还会多做 1~N 次回译调用）。
+> 默认最多 3 轮，但**无 blocker 时只再迭代一次**，问题数不再下降也会提前结束，并交付排序最优的那一轮。
+> 追求速度可以设 `MAX_VALIDATION_ROUNDS=1`，或把 `CONSISTENCY_METHOD` 设成默认的 `structural`（零额外成本）。
 
 ---
 
@@ -192,9 +238,18 @@ curl -s http://localhost:8000/api/generate \
   "glossary": [{ "term_zh": "...", "term_en": "...", "term_ja": "...", "note": "..." }],
   "markdown": { "zh": "# ...", "ja": "# ...", "en": "# ..." },
   "clarifications": { "goal": "...", "success_metrics": [...], "assumptions": [...], "open_questions": [...] },
+  "consistency": {
+    "method": "backtranslate",              // structural | backtranslate | embeddings
+    "pivot": "zh",
+    "overall": 96.4,                        // 0~100
+    "terminology_coverage": 0.89,
+    "pairs": [{ "lang": "ja", "score": 92.2, "components": { "ids": 1.0, "numeric": 1.0, "entity": 1.0, "semantic": 0.61 } }],
+    "divergences": [{ "lang": "en", "story_id": "US-2", "score": 62.0, "reason": "同一条验收标准的数字阈值不一致：…" }]
+  },
   "validation": {
     "passed": true,
     "status": "needs_review",              // passed | needs_review | blocked
+    "consistency_score": 96.4,
     "counts": { "blocker": 0, "major": 3, "minor": 1 },
     "issues": [{ "severity": "major", "category": "testability", "message": "...", "suggestion": "..." }]
   },
@@ -258,8 +313,9 @@ pytest -q          # 43 passed（Mock 模式，不联网、不花钱）
 ruff check app tests
 ```
 
-覆盖范围：LLM JSON 容错与重试、Mock 确定性、确定性结构校验（缺语种/故事数量/AC/术语表）、
-校验语义（blocker 阻塞、major 只进清单）、迭代与止损（收敛 / 达上限 / 无改善提前停）、
+覆盖范围：LLM JSON 容错/截断抢救/重试、Mock 确定性、确定性结构校验（缺语种/故事数量/AC/术语表）、
+校验语义（blocker 阻塞、major 只进清单）、迭代与止损（收敛 / 达上限 / 无改善提前停 / 无 blocker 只再迭代一次 / 交付最优轮）、
+三语一致性（编号覆盖、AC 数量、数字阈值冲突、技术词保留、术语覆盖率、语义硬否决、回译语言校验、分片与二分重试、向量方法）、
 API 校验与错误码、SSE 事件序列、Markdown 渲染。
 
 CI 定义示例见 [`docs/ci-workflow.example.yml`](docs/ci-workflow.example.yml)：复制到 `.github/workflows/ci.yml` 即可启用
@@ -271,7 +327,7 @@ CI 定义示例见 [`docs/ci-workflow.example.yml`](docs/ci-workflow.example.yml
 
 - [x] **v0.1** 三阶段流水线骨架 + PRD 模板 + Docker Compose
 - [x] **v0.2** 接入 LLM（OpenAI 兼容 + Mock 降级）、三语 PRD 与术语对照表、可判定校验语义与迭代止损、SSE 流式进度、Next.js 前端、与真实模型的三语示例输出
-- [ ] **v0.3** 三语一致性深度校验：回译 + 向量相似度给出量化一致性分数
+- [x] **v0.3** 三语一致性量化评分：确定性信号（编号 / 数字阈值 / AC 数量 / 技术词）+ 回译或跨语言向量，低分条目按风险排序并附对照文本；长 PRD 分片回译、失败二分重试、回译语言校验
 - [ ] **v0.4** 与 [VoC Agent](https://github.com/shiyuanyeming-hub/voc-agent) 联动：用户评论痛点 → 需求草稿 → PRD
 - [ ] **v0.5** PRD 版本 diff（需求变更追踪）与 Confluence / Notion / Jira 导出
 - [ ] **v0.6** 术语表持久化与团队级术语库（跨需求复用）
